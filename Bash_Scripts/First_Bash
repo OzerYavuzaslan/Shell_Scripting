@@ -1,0 +1,62 @@
+#! /bin/ksh
+T_HOST="10.207.201.38"
+T_USER="Administrator"
+T_PASSWD="Password1"
+BASE=`basename $1`
+cd /cms/cmstables
+cnt=0
+
+MY_RESULT=/cms/dc/chr/isnet_ftp_log
+MY_RESULT_DUMMY=/cms/dc/chr/isnet_ftp_dummy_log
+FAILURE=/echbuffer
+DATE=`date '+%Y-%m-%d %H:%M:%S'`
+TIMESTAMP=`date +%d%m%Y%H%M`
+
+if [ "$BASE" != "dummyech" ]
+then
+
+send()
+{
+ftp -in << MY_SCRIPT
+open $T_HOST 
+quote USER $T_USER
+quote PASS $T_PASSWD
+quote cd ISNET
+quote cd RAWS
+binary
+hash
+put $BASE $BASE$TIMESTAMP
+get $BASE$TIMESTAMP retrieval.$$
+bye
+MY_SCRIPT
+check
+}
+
+check()
+{
+if [ -f retrieval.$$ ]
+then
+	echo "$BASE$TIMESTAMP DOSYASI YOLLANDI!"
+	echo "$BASE$TIMESTAMP DOSYASI YOLLANDI! - TARIH: $DATE" >> $MY_RESULT
+	rm -f retrieval.$$
+else
+	if [ "$cnt" -eq "2" ]
+	then
+		echo "$BASE$TIMESTAMP DOSYASI YOLLANAMADI!"
+		echo "$BASE$TIMESTAMP Dosyasinin yollanmasi 3 kere denendi, yollanamadi ve buraya $FAILURE tasindi! - TARIH: $DATE" >> $MY_RESULT
+		mv $BASE $FAILURE
+	else
+		cnt=$((cnt+1))
+		sleep 5
+		send
+	fi
+fi
+}
+send
+cd /cms/dc/chr/
+./Second_Bash
+else
+echo "dummyech dosyasi pas gecildi!"
+echo "dummyech dosyasi pas gecildi! - TARIH: $DATE" >> $MY_RESULT_DUMMY
+fi
+exit 0

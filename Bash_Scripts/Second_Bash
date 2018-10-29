@@ -1,0 +1,50 @@
+#! /bin/ksh
+T_HOST="10.207.201.38"
+T_USER="Administrator"
+T_PASSWD="Password1"
+
+cd /echbuffer
+num=$(find /echbuffer -iname 'chr*' | wc -l)
+
+array=(chr*)
+
+MY_RESULT=/cms/dc/chr/isnet_ftp_failure_log
+DATE=`date '+%Y-%m-%d %H:%M:%S'`
+TIMESTAMP=`date +%d%m%Y%H%M`
+
+if [ "$num" -eq "0" ]
+then
+echo "YOLLANACAK DOSYA YOK!"
+echo "YOLLANACAK DOSYA YOK! - TARIH: $DATE" >> $MY_RESULT
+
+else
+for ((i=0;i<$num;i++))
+{
+
+ftp -in << MY_SCRIPT
+open $T_HOST 
+quote USER $T_USER
+quote PASS $T_PASSWD
+quote cd ISNET
+quote cd RAWS
+binary
+hash
+put ${array[i]} ${array[i]}$TIMESTAMP
+get ${array[i]}$TIMESTAMP retrieval.$$
+bye
+MY_SCRIPT
+
+if [ -f retrieval.$$ ]
+then
+	echo "YOLLANAMAYAN ${array[i]} DOSYASI YOLLANDI!"
+	echo "YOLLANAMAYAN ${array[i]} DOSYASI YOLLANDI! - TARIH: $DATE" >> $MY_RESULT
+	rm -f retrieval.$$
+	rm -f ${array[i]}
+	sleep 5
+else
+	echo "YOLLANAMAYAN ${array[i]} DOSYASI YINE YOLLANAMADI!"
+	echo "YOLLANAMAYAN ${array[i]} DOSYASI YINE YOLLANAMADI! - TARIH: $DATE" >> $MY_RESULT
+fi
+}
+fi
+exit 0
